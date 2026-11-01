@@ -8,19 +8,19 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(RomLibraryViewModel.self) private var viewModel
+    @Environment(AppState.self) private var appState
     @State private var isShowingClearConfirmation = false
 
     var body: some View {
         TabView {
             generalTab
                 .tabItem {
-                    Label("General", systemImage: "gear")
+                    Label("General", systemImage: AppSymbols.settingsGear)
                 }
 
             cacheTab
                 .tabItem {
-                    Label("Cache", systemImage: "cylinder.split.1x2")
+                    Label("Cache", systemImage: AppSymbols.cache)
                 }
         }
         .frame(width: 500, height: 320)
@@ -33,16 +33,16 @@ struct SettingsView: View {
         Form {
             Section("MAME Configuration") {
                 LabeledContent("Status") {
-                    if let mameInfo = viewModel.mameInfo {
-                        Label("Detected (v\(mameInfo.version))", systemImage: "checkmark.circle.fill")
+                    if let mameInfo = appState.mameInfo {
+                        Label("Detected (v\(mameInfo.version))", systemImage: AppSymbols.isOk)
                             .foregroundStyle(.green)
                     } else {
-                        Label("Not Detected", systemImage: "xmark.circle.fill")
+                        Label("Not Detected", systemImage: AppSymbols.isNotOk)
                             .foregroundStyle(.orange)
                     }
                 }
 
-                if let mameInfo = viewModel.mameInfo {
+                if let mameInfo = appState.mameInfo {
                     LabeledContent("Path") {
                         Text(mameInfo.path)
                             .font(.caption.monospaced())
@@ -53,7 +53,7 @@ struct SettingsView: View {
 
             Section("ROM Library") {
                 LabeledContent("Folder") {
-                    if let folderURL = viewModel.selectedFolderURL {
+                    if let folderURL = appState.selectedFolderURL {
                         Text(folderURL.path)
                             .font(.caption.monospaced())
                             .lineLimit(2)
@@ -64,7 +64,7 @@ struct SettingsView: View {
                 }
 
                 LabeledContent("ROM Sets Found") {
-                    Text("\(viewModel.roms.count) sets")
+                    Text("\(appState.roms.count) sets")
                         .monospacedDigit()
                 }
             }
@@ -78,23 +78,23 @@ struct SettingsView: View {
         Form {
             Section("Local MAME Cache") {
                 LabeledContent("Cached Titles") {
-                    Text("\(viewModel.gamesBySetName.count) games")
+                    Text("\(appState.gamesBySetName.count) games")
                         .monospacedDigit()
                 }
 
                 LabeledContent("Cache File Size") {
-                    Text(viewModel.cacheFileSize)
+                    Text(appState.cacheFileSize)
                         .monospacedDigit()
                 }
 
-                if !viewModel.cache.mameVersion.isEmpty {
+                if !appState.cache.mameVersion.isEmpty {
                     LabeledContent("MAME Build") {
-                        Text("MAME \(viewModel.cache.mameVersion)")
+                        Text("MAME \(appState.cache.mameVersion)")
                     }
                 }
 
                 LabeledContent("Last Updated") {
-                    Text(viewModel.cache.lastUpdated.formatted(date: .abbreviated, time: .shortened))
+                    Text(appState.cache.lastUpdated.formatted(date: .abbreviated, time: .shortened))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -103,21 +103,21 @@ struct SettingsView: View {
                 HStack(spacing: 12) {
                     Button("Rebuild Cache") {
                         Task {
-                            await viewModel.rebuildCache()
+                            await appState.rebuildCache()
                         }
                     }
-                    .disabled(viewModel.roms.isEmpty || viewModel.isBusy)
+                    .disabled(appState.roms.isEmpty || appState.isBusy)
 
                     Button("Clear Cache...") {
                         isShowingClearConfirmation = true
                     }
-                    .disabled(viewModel.gamesBySetName.isEmpty && viewModel.cache.games.isEmpty)
+                    .disabled(appState.gamesBySetName.isEmpty && appState.cache.games.isEmpty)
 
                     Spacer()
 
                     Button("Reveal in Finder") {
                         Task {
-                            await viewModel.revealCacheInFinder()
+                            await appState.revealCacheInFinder()
                         }
                     }
                 }
@@ -131,7 +131,7 @@ struct SettingsView: View {
         ) {
             Button("Clear Cache", role: .destructive) {
                 Task {
-                    await viewModel.clearCache()
+                    await appState.clearCache()
                 }
             }
             Button("Cancel", role: .cancel) { }

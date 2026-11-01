@@ -11,7 +11,7 @@ import AppKit
 struct GameDetailView: View {
     let romItem: RomItem
     let game: Game?
-    let viewModel: RomLibraryViewModel
+    @Environment(AppState.self) private var appState
     let onSelectRom: (RomItem.ID) -> Void
 
     var body: some View {
@@ -106,7 +106,7 @@ struct GameDetailView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                viewModel.launchGame(romItem)
+                appState.launchGame(romItem)
             } label: {
                 Label("Launch Game", systemImage: "play.fill")
                     .frame(maxWidth: .infinity)
@@ -114,7 +114,7 @@ struct GameDetailView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .tint(.green)
-            .disabled(viewModel.mameInfo == nil)
+            .disabled(appState.mameInfo == nil)
 
             Button {
                 NSWorkspace.shared.activateFileViewerSelecting([romItem.url])
@@ -181,7 +181,7 @@ struct GameDetailView: View {
 
                     Spacer()
 
-                    if let parentRom = viewModel.findRom(bySetName: parentName) {
+                    if let parentRom = appState.findRom(bySetName: parentName) {
                         Button("View Parent") {
                             onSelectRom(parentRom.id)
                         }
@@ -200,13 +200,13 @@ struct GameDetailView: View {
                 .padding(8)
             }
         } else if let game, !game.isClone {
-            let clones = viewModel.findClones(forParent: game.name)
+            let clones = appState.findClones(forParent: game.name)
             if !clones.isEmpty {
                 GroupBox("Clones in Library (\(clones.count))") {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(clones) { cloneItem in
                             HStack {
-                                Text(viewModel.gamesBySetName[cloneItem.name.lowercased()]?.title ?? cloneItem.name)
+                                Text(appState.gamesBySetName[cloneItem.name.lowercased()]?.title ?? cloneItem.name)
                                     .font(.caption)
                                     .lineLimit(1)
                                 Spacer()

@@ -7,21 +7,15 @@
 
 import SwiftUI
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        true
-    }
-}
-
 @main
 struct MainApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var viewModel = RomLibraryViewModel()
+    @State private var appState = AppState()
 
     var body: some Scene {
         Window("MAiMER", id: "main") {
-            ContentView()
-                .environment(viewModel)
+            MaimerView()
+                .environment(appState)
         }
         .defaultSize(width: 1050, height: 650)
         .commands {
@@ -30,7 +24,13 @@ struct MainApp: App {
         
         Settings {
             SettingsView()
-                .environment(viewModel)
+                .environment(appState)
         }
+    }
+}
+
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
     }
 }

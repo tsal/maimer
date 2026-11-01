@@ -1,5 +1,5 @@
 //
-//  RomLibraryViewModel.swift
+//  AppState.swift
 //  MAiMER
 //
 //  Created by Michael King on 11/1/26.
@@ -11,7 +11,7 @@ import AppKit
 
 @Observable
 @MainActor
-final class RomLibraryViewModel {
+final class AppState {
     private let scanner = RomScanner()
     private let mameLocator = MameLocator()
     private let dataService = MameDataService()

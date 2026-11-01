@@ -8,24 +8,24 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
-    @Environment(RomLibraryViewModel.self) private var viewModel
+struct MaimerView: View {
+    @Environment(AppState.self) private var appState
     @State private var isShowingFolderPicker = false
     @State private var isShowingMamePicker = false
     @State private var selectedRomID: RomItem.ID?
     @State private var isInspectorPresented: Bool = true
 
     var body: some View {
-        @Bindable var viewModel = viewModel
+        @Bindable var appState = appState
         NavigationStack {
             VStack(spacing: 0) {
-                if viewModel.isBusy {
+                if appState.isBusy {
                     activeProgressBanner
                 }
 
-                if viewModel.selectedFolderURL == nil {
+                if appState.selectedFolderURL == nil {
                     folderEmptyState
-                } else if viewModel.roms.isEmpty && !viewModel.isScanning {
+                } else if appState.roms.isEmpty && !appState.isScanning {
                     noRomsFoundState
                 } else {
                     romsTableView
@@ -44,17 +44,17 @@ struct ContentView: View {
                         isShowingFolderPicker = true
                     } label: {
                         Label(
-                            viewModel.selectedFolderURL == nil ? "Choose Folder" : "Change Folder",
+                            appState.selectedFolderURL == nil ? "Choose Folder" : "Change Folder",
                             systemImage: "folder"
                         )
                     }
 
                     Button {
-                        viewModel.rescan()
+                        appState.rescan()
                     } label: {
                         Label("Rescan", systemImage: "arrow.clockwise")
                     }
-                    .disabled(viewModel.selectedFolderURL == nil || viewModel.isBusy)
+                    .disabled(appState.selectedFolderURL == nil || appState.isBusy)
 
                     Button {
                         isInspectorPresented.toggle()
@@ -64,8 +64,8 @@ struct ContentView: View {
                 }
             }
             .searchable(
-                text: $viewModel.searchText,
-                prompt: "Filter \(viewModel.roms.count) ROM sets..."
+                text: $appState.searchText,
+                prompt: "Filter \(appState.roms.count) ROM sets..."
             )
             .inspector(isPresented: $isInspectorPresented) {
                 detailPane
@@ -79,10 +79,10 @@ struct ContentView: View {
                 switch result {
                 case .success(let urls):
                     if let firstURL = urls.first {
-                        viewModel.selectFolder(firstURL)
+                        appState.selectFolder(firstURL)
                     }
                 case .failure(let error):
-                    viewModel.errorMessage = error.localizedDescription
+                    appState.errorMessage = error.localizedDescription
                 }
             }
             .fileImporter(
@@ -94,11 +94,11 @@ struct ContentView: View {
                 case .success(let urls):
                     if let firstURL = urls.first {
                         Task {
-                            await viewModel.setCustomMame(url: firstURL)
+                            await appState.setCustomMame(url: firstURL)
                         }
                     }
                 case .failure(let error):
-                    viewModel.errorMessage = error.localizedDescription
+                    appState.errorMessage = error.localizedDescription
                 }
             }
         }
@@ -110,15 +110,15 @@ struct ContentView: View {
     @ViewBuilder
     private var detailPane: some View {
         if let selectedID = selectedRomID,
-           let item = viewModel.roms.first(where: { $0.id == selectedID }) {
+           let item = appState.roms.first(where: { $0.id == selectedID }) {
             GameDetailView(
                 romItem: item,
-                game: viewModel.gamesBySetName[item.name.lowercased()],
-                viewModel: viewModel,
+                game: appState.gamesBySetName[item.name.lowercased()],
                 onSelectRom: { newID in
                     selectedRomID = newID
                 }
             )
+            .environment(appState)
         } else {
             ContentUnavailableView(
                 "No Game Selected",
@@ -131,14 +131,14 @@ struct ContentView: View {
     // MARK: - Navigation Titles
 
     private var navigationTitle: String {
-        if let folderURL = viewModel.selectedFolderURL {
+        if let folderURL = appState.selectedFolderURL {
             return folderURL.lastPathComponent
         }
         return "MAiMER"
     }
 
     private var navigationSubtitle: String {
-        if let folderURL = viewModel.selectedFolderURL {
+        if let folderURL = appState.selectedFolderURL {
             return folderURL.path
         }
         return "Select a MAME ROMs folder to begin"
@@ -148,7 +148,7 @@ struct ContentView: View {
 
     @ViewBuilder
     private var mameStatusMenu: some View {
-        if viewModel.isDetectingMame {
+        if appState.isDetectingMame {
             HStack(spacing: 4) {
                 ProgressView()
                     .controlSize(.small)
@@ -156,7 +156,7 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-        } else if let mameInfo = viewModel.mameInfo {
+        } else if let mameInfo = appState.mameInfo {
             Menu {
                 Section("MAME Information") {
                     Text("Version: \(mameInfo.version)")
@@ -165,10 +165,10 @@ struct ContentView: View {
 
                 Divider()
 
-                if !viewModel.roms.isEmpty && !viewModel.isBusy {
+                if !appState.roms.isEmpty && !appState.isBusy {
                     Button("Refresh Metadata from MAME") {
                         Task {
-                            await viewModel.fetchMetadataForRoms(viewModel.roms)
+                            await appState.fetchMetadataForRoms(appState.roms)
                         }
                     }
                 }
@@ -179,7 +179,7 @@ struct ContentView: View {
 
                 Button("Re-detect MAME") {
                     Task {
-                        await viewModel.detectMame()
+                        await appState.detectMame()
                     }
                 }
             } label: {
@@ -204,13 +204,13 @@ struct ContentView: View {
                 HStack {
                     ProgressView()
                         .controlSize(.small)
-                    Text(viewModel.statusMessage)
+                    Text(appState.statusMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
 
-                    let current = viewModel.isScanning ? viewModel.progressCurrent : viewModel.metadataProgressCurrent
-                    let total = viewModel.isScanning ? viewModel.progressTotal : viewModel.metadataProgressTotal
+                    let current = appState.isScanning ? appState.progressCurrent : appState.metadataProgressCurrent
+                    let total = appState.isScanning ? appState.progressTotal : appState.metadataProgressTotal
 
                     if total > 0 {
                         Text("\(current) of \(total)")
@@ -220,8 +220,8 @@ struct ContentView: View {
                     }
                 }
 
-                let current = viewModel.isScanning ? viewModel.progressCurrent : viewModel.metadataProgressCurrent
-                let total = viewModel.isScanning ? viewModel.progressTotal : viewModel.metadataProgressTotal
+                let current = appState.isScanning ? appState.progressCurrent : appState.metadataProgressCurrent
+                let total = appState.isScanning ? appState.progressTotal : appState.metadataProgressTotal
 
                 if total > 0 {
                     ProgressView(
@@ -270,10 +270,10 @@ struct ContentView: View {
 
     @ViewBuilder
     private var romsTableView: some View {
-        @Bindable var viewModel = viewModel
-        Table(viewModel.filteredRoms, selection: $selectedRomID, sortOrder: $viewModel.sortOrder) {
+        @Bindable var appState = appState
+        Table(appState.filteredRoms, selection: $selectedRomID, sortOrder: $appState.sortOrder) {
             TableColumn("Game Title", value: \.name) { item in
-                let game = viewModel.gamesBySetName[item.name.lowercased()]
+                let game = appState.gamesBySetName[item.name.lowercased()]
                 HStack(spacing: 8) {
                     Image(systemName: "gamecontroller.fill")
                         .foregroundStyle(game?.isClone == true ? Color.purple : Color.accentColor)
@@ -298,14 +298,14 @@ struct ContentView: View {
             .width(min: 80, ideal: 100)
 
             TableColumn("Year") { item in
-                let year = viewModel.gamesBySetName[item.name.lowercased()]?.year ?? ""
+                let year = appState.gamesBySetName[item.name.lowercased()]?.year ?? ""
                 Text(year.isEmpty ? "—" : year)
                     .foregroundStyle(.secondary)
             }
             .width(55)
 
             TableColumn("Manufacturer") { item in
-                let mfg = viewModel.gamesBySetName[item.name.lowercased()]?.manufacturer ?? ""
+                let mfg = appState.gamesBySetName[item.name.lowercased()]?.manufacturer ?? ""
                 Text(mfg.isEmpty ? "—" : mfg)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -313,7 +313,7 @@ struct ContentView: View {
             .width(min: 100, ideal: 150)
 
             TableColumn("Driver") { item in
-                if let driver = viewModel.gamesBySetName[item.name.lowercased()]?.driverStatus {
+                if let driver = appState.gamesBySetName[item.name.lowercased()]?.driverStatus {
                     driverBadge(for: driver)
                 } else {
                     Text("—")
@@ -373,7 +373,7 @@ struct ContentView: View {
 
     private var bottomStatusBar: some View {
         HStack(spacing: 16) {
-            if let mameInfo = viewModel.mameInfo {
+            if let mameInfo = appState.mameInfo {
                 HStack(spacing: 4) {
                     Circle()
                         .fill(Color.green)
@@ -387,7 +387,7 @@ struct ContentView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            if let folderURL = viewModel.selectedFolderURL {
+            if let folderURL = appState.selectedFolderURL {
                 HStack(spacing: 4) {
                     Image(systemName: "folder")
                         .foregroundStyle(.secondary)
@@ -399,20 +399,20 @@ struct ContentView: View {
 
             Spacer()
 
-            if !viewModel.filteredRoms.isEmpty {
-                if !viewModel.gamesBySetName.isEmpty {
-                    Text("\(viewModel.gamesBySetName.count) titles identified")
+            if !appState.filteredRoms.isEmpty {
+                if !appState.gamesBySetName.isEmpty {
+                    Text("\(appState.gamesBySetName.count) titles identified")
                         .foregroundStyle(.secondary)
                     Text("•")
                         .foregroundStyle(.tertiary)
                 }
 
-                if viewModel.filteredRoms.count != viewModel.roms.count {
-                    Text("Showing \(viewModel.filteredRoms.count) of \(viewModel.roms.count) sets")
+                if appState.filteredRoms.count != appState.roms.count {
+                    Text("Showing \(appState.filteredRoms.count) of \(appState.roms.count) sets")
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("\(viewModel.roms.count) sets")
+                    Text("\(appState.roms.count) sets")
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
@@ -420,7 +420,7 @@ struct ContentView: View {
                 Text("•")
                     .foregroundStyle(.tertiary)
 
-                Text(viewModel.formattedTotalBytes)
+                Text(appState.formattedTotalBytes)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
@@ -433,6 +433,6 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
-        .environment(RomLibraryViewModel())
+    MaimerView()
+        .environment(AppState())
 }
