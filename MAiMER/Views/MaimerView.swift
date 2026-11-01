@@ -23,7 +23,7 @@ struct MaimerView: View {
                     activeProgressBanner
                 }
 
-                if appState.selectedFolderURL == nil {
+                if appState.selectedRomsFolderURL == nil {
                     folderEmptyState
                 } else if appState.roms.isEmpty && !appState.isScanning {
                     noRomsFoundState
@@ -44,7 +44,7 @@ struct MaimerView: View {
                         isShowingFolderPicker = true
                     } label: {
                         Label(
-                            appState.selectedFolderURL == nil ? "Choose Folder" : "Change Folder",
+                            appState.selectedRomsFolderURL == nil ? "Choose Folder" : "Change Folder",
                             systemImage: "folder"
                         )
                     }
@@ -54,7 +54,7 @@ struct MaimerView: View {
                     } label: {
                         Label("Rescan", systemImage: "arrow.clockwise")
                     }
-                    .disabled(appState.selectedFolderURL == nil || appState.isBusy)
+                    .disabled(appState.selectedRomsFolderURL == nil || appState.isBusy)
 
                     Button {
                         isInspectorPresented.toggle()
@@ -131,14 +131,14 @@ struct MaimerView: View {
     // MARK: - Navigation Titles
 
     private var navigationTitle: String {
-        if let folderURL = appState.selectedFolderURL {
+        if let folderURL = appState.selectedRomsFolderURL {
             return folderURL.lastPathComponent
         }
         return "MAiMER"
     }
 
     private var navigationSubtitle: String {
-        if let folderURL = appState.selectedFolderURL {
+        if let folderURL = appState.selectedRomsFolderURL {
             return folderURL.path
         }
         return "Select a MAME ROMs folder to begin"
@@ -387,7 +387,7 @@ struct MaimerView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            if let folderURL = appState.selectedFolderURL {
+            if let folderURL = appState.selectedRomsFolderURL {
                 HStack(spacing: 4) {
                     Image(systemName: "folder")
                         .foregroundStyle(.secondary)

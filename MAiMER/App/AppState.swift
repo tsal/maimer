@@ -19,14 +19,21 @@ final class AppState {
 
     private let bookmarkKey = "savedRomFolderBookmark"
     private let folderPathKey = "savedRomFolderPath"
-
+    private let fileManager = FileManager.default
+    
+    private var supportDirectoryURL: URL {
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let maimerHome = appSupport.appendingPathComponent("MAiMER", isDirectory: true)
+        return maimerHome.appendingPathComponent("mame", isDirectory: true)
+    }
+    
     var roms: [RomItem] = []
     var gamesBySetName: [String: Game] = [:]
     var gameIndex: GameIndex? = nil
     var cache: MameCache = MameCache()
     var cacheFileSize: String = "0 B"
 
-    var selectedFolderURL: URL?
+    var selectedRomsFolderURL: URL?
     var searchText: String = ""
     var loadingStage: LoadingStage = .idle
     var progressCurrent: Int = 0
@@ -43,7 +50,8 @@ final class AppState {
     var metadataProgressTotal: Int = 0
 
     init() {
-        restoreSavedFolder()
+        initializeMameFolder()
+        restoreRomsFolder()
         Task {
             await loadCache()
             await detectMame()
@@ -109,24 +117,29 @@ final class AppState {
 
     func launchGame(_ item: RomItem) {
         guard let mameURL = mameInfo?.executableURL,
-              let folderURL = selectedFolderURL else { return }
-
-        DispatchQueue.global(qos: .userInitiated).async {
+              let folderURL = selectedRomsFolderURL else { return }
+            
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            Task {
+                await self?.launchGameItem(item, mameURL, folderURL)
+            }
+        }
+    }
+    
+    private func launchGameItem(_ item: RomItem, _ mameURL: URL, _ romPath: URL) {
+        do {
             let process = Process()
             process.executableURL = mameURL
             process.arguments = [
                 item.name,
-                "-rompath", folderURL.path,
+                "-rompath", romPath.path,
                 "-skip_gameinfo",
                 "-window"
             ]
-            process.currentDirectoryURL = mameURL.deletingLastPathComponent()
-
-            do {
-                try process.run()
-            } catch {
-                print("Failed to launch MAME: \(error)")
-            }
+            process.currentDirectoryURL = supportDirectoryURL
+            try process.run()
+        } catch {
+            print("Failed to launch MAME: \(error)")
         }
     }
 
@@ -248,7 +261,7 @@ final class AppState {
     // MARK: - Actions
 
     func selectFolder(_ url: URL) {
-        selectedFolderURL = url
+        selectedRomsFolderURL = url
         saveFolderBookmark(url)
         Task {
             await scanCurrentFolder()
@@ -256,14 +269,14 @@ final class AppState {
     }
 
     func rescan() {
-        guard selectedFolderURL != nil else { return }
+        guard selectedRomsFolderURL != nil else { return }
         Task {
             await scanCurrentFolder()
         }
     }
 
     func scanCurrentFolder() async {
-        guard let folderURL = selectedFolderURL else { return }
+        guard let folderURL = selectedRomsFolderURL else { return }
 
         loadingStage = .scanningRoms
         progressCurrent = 0
@@ -312,8 +325,14 @@ final class AppState {
             UserDefaults.standard.set(bookmarkData, forKey: bookmarkKey)
         }
     }
+    
+    private func initializeMameFolder() {
+        if !fileManager.fileExists(atPath: supportDirectoryURL.path) {
+            try! fileManager.createDirectory(at: supportDirectoryURL, withIntermediateDirectories: true)
+        }
+    }
 
-    private func restoreSavedFolder() {
+    private func restoreRomsFolder() {
         if let bookmarkData = UserDefaults.standard.data(forKey: bookmarkKey) {
             var isStale = false
             if let resolvedURL = try? URL(
@@ -325,7 +344,7 @@ final class AppState {
                 if isStale {
                     saveFolderBookmark(resolvedURL)
                 }
-                self.selectedFolderURL = resolvedURL
+                self.selectedRomsFolderURL = resolvedURL
                 Task {
                     await self.scanCurrentFolder()
                 }
@@ -336,7 +355,7 @@ final class AppState {
         if let savedPath = UserDefaults.standard.string(forKey: folderPathKey) {
             let url = URL(fileURLWithPath: savedPath)
             if FileManager.default.fileExists(atPath: url.path) {
-                self.selectedFolderURL = url
+                self.selectedRomsFolderURL = url
                 Task {
                     await self.scanCurrentFolder()
                 }

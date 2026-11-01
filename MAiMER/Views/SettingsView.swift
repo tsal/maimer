@@ -53,7 +53,7 @@ struct SettingsView: View {
 
             Section("ROM Library") {
                 LabeledContent("Folder") {
-                    if let folderURL = appState.selectedFolderURL {
+                    if let folderURL = appState.selectedRomsFolderURL {
                         Text(folderURL.path)
                             .font(.caption.monospaced())
                             .lineLimit(2)
