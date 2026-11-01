@@ -51,7 +51,7 @@ actor MameCacheService {
         }
     }
 
-    /// Persists the cache to Application Support using PropertyListEncoder.
+    /// Persists the cache to Application Support using JSONEncoder.
     func save(_ cache: MameCache) throws {
         if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
             try fileManager.createDirectory(at: cacheDirectoryURL, withIntermediateDirectories: true)
