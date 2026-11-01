@@ -31,7 +31,7 @@ struct Game: Codable, Identifiable, Sendable, CustomStringConvertible {
         description.isEmpty ? name : description
     }
 
-    enum RomStatus: String, Codable, CaseIterable, CaseIterableDefaultLast, UIRenderable {
+    enum RomStatus: String, Codable, CaseIterable, CaseIterableDefaultLast {
         case available
         case missing
         case incorrect
@@ -40,19 +40,6 @@ struct Game: Codable, Identifiable, Sendable, CustomStringConvertible {
         case chdRequired
         case chdMissing
         case unknown
-        
-        var symbol: String {
-            switch self {
-                case .available: return "✅"
-                case .missing: return "❌"
-                case .incorrect: return "⚠️"
-                case .notWorking: return "🔴"
-                case .preliminary: return "🟡"
-                case .chdRequired: return "💿"
-                case .chdMissing: return "💿❌"
-                case .unknown: return "❓"
-            }
-        }
         
         var description: String {
             switch self {
@@ -72,33 +59,13 @@ struct Game: Codable, Identifiable, Sendable, CustomStringConvertible {
         }
     }
     
-    enum VerificationStatus: String, Codable, CaseIterable, CaseIterableDefaultLast, UIRenderable {
+    enum VerificationStatus: String, Codable, CaseIterable, CaseIterableDefaultLast {
         case verified
         case failed
         case warning
         case notFound
         case notVerified
-        
-        var symbol: String {
-            switch self {
-                case .verified: "✅"
-                case .failed: "❌"
-                case .warning: "⚠️"
-                case .notFound: "❓"
-                case .notVerified: "⏳"
-            }
-        }
-        
-        var description: String {
-            switch self {
-                case .verified: "Verified"
-                case .failed: "Failed"
-                case .warning: "Warning"
-                case .notFound: "Not Found"
-                case .notVerified: "Not Verified"
-            }
-        }
-        
+
         init(rawString: String) {
             self = .init(rawValue: rawString) ?? .notVerified
         }
@@ -108,8 +75,4 @@ struct Game: Codable, Identifiable, Sendable, CustomStringConvertible {
 // TODO: move these to a new home
 protocol CaseIterableDefaultLast: RawRepresentable, CaseIterable {
     init(rawString: String)
-}
-
-protocol UIRenderable: CustomStringConvertible {
-    var symbol: String { get }
 }
